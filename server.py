@@ -1,8 +1,7 @@
 #  coding: utf-8 
 import socketserver
 import os
-from os import path
-import codecs
+import sys
 import datetime
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
@@ -31,8 +30,9 @@ import datetime
 # try: curl -v -X GET http://127.0.0.1:8080/
 
 
+
+#takes the request from the client and returns the request type and the requested directory
 def requestParser(data):
-	#takes the request from the client and returns the request type and the requested directory
 	data = data.split("\r\n")
 	print(data)
 
@@ -46,19 +46,17 @@ def requestParser(data):
 			#parse the request
 			method = request[0]
 			directory = request[1]	
-			#print("original directory: ", directory)
 			host = data[1].split(" ")[1]
 		else: 
 			directory = ""
 
-	print("dir in first function: ", directory)
-
-	return method, directory, host, data
+	return method, directory.replace("//","/"), host, data
 
 
+
+#lists all accessible directories
 def folderStructure():
 
-	#lists all accessible directories
 	#https://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory
 	all_files = []
 	all_dirs = []
@@ -82,7 +80,7 @@ def folderStructure():
 	return all_dirs, all_files	
 
 
-
+#checks if a path that was requested
 def validPath(path):
 
 	#get all input paths in a consistent format
@@ -101,8 +99,14 @@ def validPath(path):
 
 	#check if requested path is a file or folder
 	if path in all_dirs or path + "index.html" in all_files:
+		path = path.replace("/www/www/","/www/")
+		path = path.replace("www/www/","www/")
+		path = path.replace("//","/")
 		return path + "index.html"
 	elif path in all_files:
+		path = path.replace("/www/www/","/www/")
+		path = path.replace("www/www/","www/")
+		path = path.replace("//","/")
 		return path
 	else:
 		return False
@@ -118,41 +122,41 @@ def mimeType(path):
 		return "text/plain"
 
 
+#choose the reponse code
 def chooseResponse(method, directory):
 
-	#print("CHOOSE PATH")
 	new_path = False
 	
-
 	#plain by default
 	ctype = "text/plain"
 
 	if method == "GET":
-		print("original path:  ", directory)
 		new_path = validPath(directory)
-		print("after valid path:  ", new_path)
-		print(" ")
 		
 		if new_path == False:
 			new_path = validPath(directory + "/")
 			if new_path == False:
+				#page not found
 				response = 404
 			else:
-				#variation of path exists. redirect
+				#variation of path exists. redirect to that page
 				response = 301
 				ctype = mimeType(new_path)
 		else:
-			#if directory exists
+			#success code
 			response = 200
 			ctype = mimeType(new_path)
 
 	#if method is not GET then return 405 method not allowed error
 	else:
 		response = 405
+
 	return response, ctype, directory, new_path
 
 
 
+#create the header based on the response code.
+#returns the header and the body
 def createHeader(response, ctype, directory, new_path, parsed_data, host):
 	
 	body = ""
@@ -167,8 +171,8 @@ def createHeader(response, ctype, directory, new_path, parsed_data, host):
 		header = "HTTP/1.1 404 Error\r\n\r\n" + "404 Error. This page doesn't exist.\r\n"
 		return header
 	elif response == 301:
-		header = "HTTP/1.1 301 Moved Permanently\r\n" + "Location: " + new_path +"\r\n"
-		#add redirects
+		header = "HTTP/1.1 301 Moved Permanently\r\n" 
+		header += "Location: " + new_path + "\r\n"
 	elif response == 405:
 		header = "HTTP/1.1 405 Method Not Allowed\r\n\r\n" + "405 Error. Request type not allowed\r\n"
 		return header
@@ -176,46 +180,32 @@ def createHeader(response, ctype, directory, new_path, parsed_data, host):
 	header += "Host: " + host + "\r\n"
 	header += "Date: " + str(datetime.datetime.now()) + "\r\n"
 	header += "Content-Type: "+ctype + "\r\n" 
-	#content length
+
+	#body
 	header +="\r\n"
 	header += body
-
-
-	#server = ...
-	#header += "Server :" + server + "\r\n"
-
-
-	# connection = 
-	# header += "Connection: " +  connection + "\r\n"
-
-
 	header += "\r\n"
 
 	return header
 
 
 
-
-
-
-
+#Handle web requests
 class MyWebServer(socketserver.BaseRequestHandler):
     
 	def handle(self):
 		self.data = self.request.recv(1024).strip()
 		print ("Got a request of: %s\n" % self.data.decode())
 
-		#parse the requ+ est
+		#parse the request
 		method, directory, host, parsed_data = requestParser(self.data.decode())
 		response, ctype, directory, new_path= chooseResponse(method, directory)
 		message = createHeader(response, ctype, directory, new_path, parsed_data, host)
-		#print(message)
-
+		print(message)
+		print(" ")
 
 		#send back the data
 		self.request.sendall(bytearray(message,'utf-8'))
-
-
 
 
 
