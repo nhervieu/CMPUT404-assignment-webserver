@@ -25,25 +25,34 @@ import datetime
 #
 # http://docs.python.org/2/library/socketserver.html
 #
+# Updated server.py done by Natalie Hervieux (nhervieu)
+#
+# Referenced: https://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory written 
+# by author: https://stackoverflow.com/users/1199/blair-conrad. 
+# This code is covered by the MIT license.
+#
 # run: python freetests.py
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
 
 
-#takes the request from the client and returns the request type and the requested directory
+# takes the request from the client and parses it
+# returns the request type (eg. get, push), the requested directory, the host, and the full input data split by line
 def requestParser(data):
+	#parse data into a list of each line
 	data = data.split("\r\n")
 	print(data)
 
+	#initialize values
 	method, directory, host = '', '', ''
 
+	#split the first line of the request
 	request = data[0].split(" ")
 
 	#only parse if http1.1 request
 	if len(request)==3:
 		if request[2] == 'HTTP/1.1':
-			#parse the request
 			method = request[0]
 			directory = request[1]	
 			host = data[1].split(" ")[1]
@@ -54,14 +63,14 @@ def requestParser(data):
 
 
 
-#lists all accessible directories
+#lists all accessible directories and files that the client has permission to see
 def folderStructure():
 
-	#https://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory
 	all_files = []
 	all_dirs = []
 	dirs = []
 
+	#https://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory
 	dirs = [x[0] for x in os.walk("www/")]
 
 	for folder in dirs:
@@ -80,7 +89,9 @@ def folderStructure():
 	return all_dirs, all_files	
 
 
-#checks if a path that was requested
+# checks if a path that was requested is valid and accessible by the client
+# returns false if it is not an accessible path
+# returns the full valid path if input was valid
 def validPath(path):
 
 	#get all input paths in a consistent format
@@ -92,7 +103,6 @@ def validPath(path):
 		path = "/" + path
 	elif path[0] == "/":
 		path = "www" + path
-
 
 	#list all folders and files in www directory
 	all_dirs, all_files	= folderStructure()
@@ -112,8 +122,8 @@ def validPath(path):
 		return False
 
 
-def mimeType(path):
 #returns the mime type associated with the file defined by path
+def mimeType(path):
 	if path[-4:] == ".css":
 		return"text/css"
 	elif path[-5:] == ".html":
@@ -122,7 +132,9 @@ def mimeType(path):
 		return "text/plain"
 
 
-#choose the reponse code
+# choose the response code
+# return the response code, the content type, 
+# also returns the original directory and the full directory if the original was shortened
 def chooseResponse(method, directory):
 
 	new_path = False
@@ -134,6 +146,7 @@ def chooseResponse(method, directory):
 		new_path = validPath(directory)
 		
 		if new_path == False:
+			#see if it's valid if we add a slash at the end. return 301 if so.
 			new_path = validPath(directory + "/")
 			if new_path == False:
 				#page not found
@@ -202,7 +215,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
 		response, ctype, directory, new_path= chooseResponse(method, directory)
 		message = createHeader(response, ctype, directory, new_path, parsed_data, host)
 		print(message)
-		print(" ")
 
 		#send back the data
 		self.request.sendall(bytearray(message,'utf-8'))
@@ -218,9 +230,4 @@ if __name__ == "__main__":
 	# Activate the server; this will keep running until you
 	# interrupt the program with Ctrl-C
 	server.serve_forever()
-
-
-
-
-
 
