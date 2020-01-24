@@ -42,7 +42,6 @@ import datetime
 def requestParser(data):
 	#parse data into a list of each line
 	data = data.split("\r\n")
-	print(data)
 
 	#initialize values
 	method, directory, host = '', '', ''
@@ -186,6 +185,7 @@ def createHeader(response, ctype, directory, new_path, parsed_data, host):
 	elif response == 301:
 		header = "HTTP/1.1 301 Moved Permanently\r\n" 
 		header += "Location: " + new_path + "\r\n"
+		return header
 	elif response == 405:
 		header = "HTTP/1.1 405 Method Not Allowed\r\n\r\n" + "405 Error. Request type not allowed\r\n"
 		return header
@@ -214,7 +214,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
 		method, directory, host, parsed_data = requestParser(self.data.decode())
 		response, ctype, directory, new_path= chooseResponse(method, directory)
 		message = createHeader(response, ctype, directory, new_path, parsed_data, host)
-		print(message)
+		print(message + "\n")
 
 		#send back the data
 		self.request.sendall(bytearray(message,'utf-8'))
