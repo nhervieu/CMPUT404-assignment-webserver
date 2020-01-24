@@ -28,7 +28,7 @@ compatible) http://docs.python.org/2/library/socketserver.html
 Updated server.py contains contributions from:
 * Natalie Hervieux (nhervieu)
 
-Code in server.py to searching local directory taken from https://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory written by author https://stackoverflow.com/users/1199/blair-conrad. This code is covered by the MIT license.
+Code in server.py to search local directories was taken from https://stackoverflow.com/questions/973473/getting-a-list-of-all-subdirectories-in-the-current-directory written by author https://stackoverflow.com/users/1199/blair-conrad. This code is covered by the MIT license.
 
 
 
